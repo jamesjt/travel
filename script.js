@@ -6,10 +6,11 @@ const iconMapping = {
     'Travel - Car': 'car',
     'Travel - Bike': 'bicycle',
     'Travel - Boat': 'ship',
-    'Breakfast': 'coffee',
+    'Breakfast': 'utensils',
     'Lunch': 'utensils',
-    'Dinner': 'wine-glass',
+    'Dinner': 'utensils',
     'Drinks': 'cocktail',
+    'Cafe': 'coffee',
     'Ruins': 'archway',
     'Museum': 'landmark',
     'Hotel': 'bed',
@@ -18,18 +19,19 @@ const iconMapping = {
 
 // Define color mappings for event types
 const colorMapping = {
-    'Travel - Plane': 'blue',
-    'Travel - Car': 'green',
-    'Travel - Bike': 'orange',
-    'Travel - Boat': 'purple',
+    'Travel - Plane': 'black',
+    'Travel - Car': 'black',
+    'Travel - Bike': 'black',
+    'Travel - Boat': 'black',
     'Breakfast': 'red',
     'Lunch': 'red',
     'Dinner': 'red',
     'Drinks': 'red',
-    'Ruins': 'gray',
-    'Museum': 'gray',
-    'Hotel': 'pink',
-    'Walk': 'yellow'
+    'Cafe': 'red',
+    'Ruins': 'blue',
+    'Museum': 'blue',
+    'Hotel': 'gray',
+    'Walk': 'green'
 };
 
 // Initialize map
