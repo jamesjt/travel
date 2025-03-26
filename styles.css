@@ -36,7 +36,7 @@ body {
 #timeline-selector {
     padding: 10px 20px;
     background-color: #ecf0f1;
-    border-bottom: 1 mongodhiarea: 1px solid #bdc3c7;
+    border-bottom: 1px solid #bdc3c7; /* Fixed typo: removed 'mongodhiarea' */
 }
 
 .timeline-wrapper {
@@ -169,8 +169,6 @@ body {
 
 .toggle {
     display: flex;
-
-
     align-items: center;
     cursor: pointer;
     font-weight: bold;
@@ -487,4 +485,10 @@ body {
 /* Highlight focused event */
 .event-item.focused, .event-row.focused {
     border: 5px solid #3498db;
+}
+
+/* Icon text for timeline */
+.icon-text {
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
 }
