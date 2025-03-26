@@ -4,7 +4,7 @@
 const map = L.map('map').setView([20, 0], 2); // World view
 const markers = L.markerClusterGroup();
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+    attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
 }).addTo(map);
 
 // Global variables
@@ -18,12 +18,15 @@ Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eA
     complete: function(results) {
         tripsData = results.data.map((d, i) => ({
             id: i + 1,
-            date: d3.timeParse("%Y-%m-%d")(d.Date), // Adjust format based on your sheet
+            date: d3.timeParse("%B %d, %Y")(d.Date), // Updated to match CSV date format
             lat: parseFloat(d.Latitude),
             lng: parseFloat(d.Longitude),
             description: d.Description || 'No description',
             photos: d.Photos || '' // Optional column for photo URLs
         })).filter(d => d.date && !isNaN(d.lat) && !isNaN(d.lng)); // Filter invalid entries
+
+        // Optional: Uncomment for debugging
+        // console.log('Parsed tripsData:', tripsData);
 
         initTimeline();
         initMap();
@@ -87,7 +90,16 @@ function initMap() {
 }
 
 function fitMapToBounds() {
-    const bounds = L.latLngBounds(tripsData.map(t => [trip.lat, trip.lng]));
+    if (tripsData.length === 0) {
+        console.warn('No valid trip data to fit bounds. Defaulting to world view.');
+        map.setView([20, 0], 2); // Default to world view
+        return;
+    }
+    const bounds = L.latLngBounds(tripsData.map(t => [t.lat, t.lng]));
+    if (!bounds.isValid()) {
+        console.error('Bounds are not valid. Check latitude and longitude values.');
+        return;
+    }
     map.fitBounds(bounds, { padding: [50, 50] });
 }
 
