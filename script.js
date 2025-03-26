@@ -37,13 +37,13 @@ const colorMapping = {
 // Initialize map with smooth zoom options
 const map = L.map('map', {
     zoomAnimation: true, // Enable smooth zoom transitions
-    zoomSnap: 0.5 // Finer zoom increments (half levels)
+    zoomSnap: 1 // Finer zoom increments (half levels)
 }).setView([20, 0], 2); // Default world view
 
 // Initialize marker cluster group with adjusted clustering settings
 const markers = L.markerClusterGroup({
-    maxClusterRadius: 40, // Clusters form only when markers are within 40 pixels
-    disableClusteringAtZoom: 15 // No clustering at zoom level 15 and above
+    maxClusterRadius: 10, // Clusters form only when markers are within 40 pixels
+    disableClusteringAtZoom: 30 // No clustering at zoom level 15 and above
 });
 
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
