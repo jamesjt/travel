@@ -91,7 +91,10 @@ Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eA
             date: d3.timeParse("%B %d, %Y")(d.Date),
             lat: parseFloat(d.Latitude),
             lng: parseFloat(d.Longitude),
+            summary: d.Summary || 'No summary',
             description: d.Description || 'No description',
+            review: d.Review || 'No review',
+            rating: d.Rating || 'No rating',
             photos: d.Photos || '',
             eventType: d['Event Type'] // Assuming CSV has an "Event Type" column
         })).filter(d => d.date); // Keep all rows with a valid date
@@ -174,7 +177,25 @@ function initTimeline() {
                     .attr('font-size', '12px') // Reduced from 15px to 12px
                     .attr('text-anchor', 'middle') // Center horizontally
                     .attr('dominant-baseline', 'central') // Center vertically
-                    .text(unicodeByIcon[iconMapping[event.eventType]]); // Set icon Unicode
+                    .text(unicodeByIcon[iconMapping[event.eventType]]) // Set icon Unicode
+                    .datum(event) // Associate data with the element
+                    .on('mouseover', function(event) {
+                        const eventData = d3.select(this).datum();
+                        const tooltip = d3.select('#timeline-tooltip');
+                        tooltip.style('display', 'block')
+                            .html(`
+                                <strong>Date:</strong> ${d3.timeFormat("%B %d, %Y")(eventData.date)}<br>
+                                <strong>Summary:</strong> ${eventData.summary}<br>
+                                <strong>Description:</strong> ${eventData.description}<br>
+                                <strong>Review:</strong> ${eventData.review}<br>
+                                <strong>Rating:</strong> ${eventData.rating}
+                            `)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 10) + 'px');
+                    })
+                    .on('mouseout', function() {
+                        d3.select('#timeline-tooltip').style('display', 'none');
+                    });
             });
         });
     });
@@ -202,7 +223,7 @@ function initMap() {
 
         const marker = L.marker([trip.lat, trip.lng], { icon: customIcon }).bindPopup(`
             <div class="popup-event-date">${d3.timeFormat("%B %d, %Y")(trip.date)}</div>
-            <div class="popup-short-summary">${trip.description}</div>
+            <div class="popup-short-summary">${trip.summary}</div>
         `);
         marker.tripId = trip.id; // Assign trip ID to marker for identification
         marker.on('click', () => focusTrip(trip.id));
@@ -243,7 +264,7 @@ function initSidebar() {
                     <div class="state-icons"><div class="state-icon active"></div></div>
                     <div class="event-item" data-id="${trip.id}">
                         <div class="event-date"><span class="event-number-circle">${trip.id}</span>${d3.timeFormat("%B %d")(trip.date)}</div>
-                        <div class="event-summary">${trip.description}</div>
+                        <div class="event-summary">${trip.summary}</div>
                     </div>
                 `)
                 .on('click', () => focusTrip(trip.id));
