@@ -34,9 +34,18 @@ const colorMapping = {
     'Walk': 'green'
 };
 
-// Initialize map
-const map = L.map('map').setView([20, 0], 2); // Default world view
-const markers = L.markerClusterGroup();
+// Initialize map with smooth zoom options
+const map = L.map('map', {
+    zoomAnimation: true, // Enable smooth zoom transitions
+    zoomSnap: 0.5 // Finer zoom increments (half levels)
+}).setView([20, 0], 2); // Default world view
+
+// Initialize marker cluster group with adjusted clustering settings
+const markers = L.markerClusterGroup({
+    maxClusterRadius: 40, // Clusters form only when markers are within 40 pixels
+    disableClusteringAtZoom: 15 // No clustering at zoom level 15 and above
+});
+
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
 }).addTo(map);
