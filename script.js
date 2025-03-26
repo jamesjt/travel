@@ -184,11 +184,11 @@ function initTimeline() {
                         const tooltip = d3.select('#timeline-tooltip');
                         tooltip.style('display', 'block')
                             .html(`
-                                <strong>Date:</strong> ${d3.timeFormat("%B %d, %Y")(eventData.date)}<br>
-                                <strong>Summary:</strong> ${eventData.summary}<br>
-                                <strong>Description:</strong> ${eventData.description}<br>
-                                <strong>Review:</strong> ${eventData.review}<br>
-                                <strong>Rating:</strong> ${eventData.rating}
+                                <div class='event-date'> ${d3.timeFormat("%B %d, %Y")(eventData.date)}</div>
+                                <div class='event-summary'> ${eventData.summary}</div>
+                                <div class='event-description'> ${eventData.description}</div>
+                                <div class='event-review'> ${eventData.review}</div>
+                                <div class='event-rating'> ${eventData.rating}</div>
                             `)
                             .style('left', (event.pageX + 10) + 'px')
                             .style('top', (event.pageY - 10) + 'px');
