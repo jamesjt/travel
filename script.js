@@ -34,6 +34,30 @@ const colorMapping = {
     'Walk': 'green'
 };
 
+// Define rows with their colors and event types for the timeline
+const rows = [
+    { color: 'black', types: ['Travel - Plane', 'Travel - Car', 'Travel - Bike', 'Travel - Boat'] },
+    { color: 'red', types: ['Breakfast', 'Lunch', 'Dinner', 'Drinks', 'Cafe'] },
+    { color: 'blue', types: ['Ruins', 'Museum'] },
+    { color: 'green', types: ['Walk'] },
+    { color: 'gray', types: ['Hotel'] }
+];
+
+// Define Unicode mappings for Font Awesome icons
+const unicodeByIcon = {
+    'plane': '\uf072',
+    'car': '\uf1b9',
+    'bicycle': '\uf206',
+    'ship': '\uf21a',
+    'utensils': '\uf2e7',
+    'cocktail': '\uf561',
+    'coffee': '\uf0f4',
+    'archway': '\uf557',
+    'landmark': '\uf66f',
+    'bed': '\uf236',
+    'walking': '\uf554'
+};
+
 // Initialize map with smooth zoom options
 const map = L.map('map', {
     zoomAnimation: true, // Enable smooth zoom transitions
@@ -89,10 +113,15 @@ function initTimeline() {
         return;
     }
 
+    // Define layout parameters
     const margin = { top: 20, right: 20, bottom: 30, left: 20 };
+    const rowHeight = 20; // Height of each icon row
+    const iconRowsHeight = rows.length * rowHeight; // Total height for 5 rows (100px)
+    const timelineHeight = 70; // Height for the timeline circles and axis
+    const height = iconRowsHeight + timelineHeight; // Total content height (170px)
     const width = document.getElementById('timeline').offsetWidth - margin.left - margin.right;
-    const height = 120 - margin.top - margin.bottom;
 
+    // Create SVG with adjusted height
     const svg = d3.select('.timeline-bar')
         .append('svg')
         .attr('width', width + margin.left + margin.right)
@@ -100,21 +129,68 @@ function initTimeline() {
         .append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
+    // Define x-scale for dates
     const x = d3.scaleTime()
         .domain(d3.extent(allTripsData, d => d.date))
         .range([0, width]);
 
+    // Add icon rows
+    rows.forEach((row, rowIndex) => {
+        const rowY = rowIndex * rowHeight;
+
+        // Add background rectangle for the row
+        svg.append('rect')
+            .attr('x', 0)
+            .attr('y', rowY)
+            .attr('width', width)
+            .attr('height', rowHeight)
+            .attr('fill', row.color)
+            .attr('opacity', 0.3);
+
+        // Filter events for this row
+        const rowEvents = allTripsData.filter(d => row.types.includes(d.eventType));
+
+        // Group events by day
+        const eventsByDate = d3.group(rowEvents, d => d3.timeDay(d.date));
+
+        // Place icons for each date
+        eventsByDate.forEach((events, date) => {
+            const n = events.length; // Number of events on this date for this row
+            const iconSize = 15; // Icon width/height
+            const gap = 2; // Gap between icons
+            const totalWidth = n * iconSize + (n - 1) * gap; // Total width for all icons
+            const startX = x(date) - totalWidth / 2 + iconSize / 2; // Center icons around date position
+
+            events.forEach((event, i) => {
+                const xPos = startX + i * (iconSize + gap); // Position each icon side by side
+                const yPos = rowY + rowHeight / 2; // Center vertically in row
+
+                svg.append('text')
+                    .attr('class', 'icon-text') // Use CSS to set Font Awesome properties
+                    .attr('x', xPos)
+                    .attr('y', yPos)
+                    .attr('fill', colorMapping[event.eventType]) // Match map marker color
+                    .attr('font-size', '15px')
+                    .attr('text-anchor', 'middle') // Center horizontally
+                    .attr('dominant-baseline', 'central') // Center vertically
+                    .text(unicodeByIcon[iconMapping[event.eventType]]); // Set icon Unicode
+            });
+        });
+    });
+
+    // Add timeline axis below icon rows
     svg.append('g')
-        .attr('transform', `translate(0,${height})`)
+        .attr('transform', `translate(0,${iconRowsHeight + timelineHeight})`)
         .call(d3.axisBottom(x));
 
+    // Add timeline circles below icon rows
     svg.selectAll('.trip')
         .data(allTripsData)
         .enter()
         .append('circle')
         .attr('class', 'trip')
         .attr('cx', d => x(d.date))
-        .attr('cy', height / 2)
+        .attr('cy', iconRowsHeight + timelineHeight / 2) // Center in timeline section
         .attr('r', 5)
         .attr('fill', '#3498db')
         .on('click', (event, d) => focusTrip(d.id));
