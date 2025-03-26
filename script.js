@@ -1,5 +1,37 @@
 // script.js
 
+// Define icon mappings for event types using Font Awesome icons
+const iconMapping = {
+    'Travel - Plane': 'plane',
+    'Travel - Car': 'car',
+    'Travel - Bike': 'bicycle',
+    'Travel - Boat': 'ship',
+    'Breakfast': 'coffee',
+    'Lunch': 'utensils',
+    'Dinner': 'wine-glass',
+    'Drinks': 'cocktail',
+    'Ruins': 'archway',
+    'Museum': 'landmark',
+    'Hotel': 'bed',
+    'Walk': 'walking'
+};
+
+// Define color mappings for event types
+const colorMapping = {
+    'Travel - Plane': 'blue',
+    'Travel - Car': 'green',
+    'Travel - Bike': 'orange',
+    'Travel - Boat': 'purple',
+    'Breakfast': 'red',
+    'Lunch': 'red',
+    'Dinner': 'red',
+    'Drinks': 'red',
+    'Ruins': 'gray',
+    'Museum': 'gray',
+    'Hotel': 'pink',
+    'Walk': 'yellow'
+};
+
 // Initialize map
 const map = L.map('map').setView([20, 0], 2); // Default world view
 const markers = L.markerClusterGroup();
@@ -17,14 +49,15 @@ Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eA
     download: true,
     header: true,
     complete: function(results) {
-        // Parse all rows into allTripsData
+        // Parse all rows into allTripsData, including eventType
         allTripsData = results.data.map((d, i) => ({
             id: i + 1,
             date: d3.timeParse("%B %d, %Y")(d.Date),
             lat: parseFloat(d.Latitude),
             lng: parseFloat(d.Longitude),
             description: d.Description || 'No description',
-            photos: d.Photos || ''
+            photos: d.Photos || '',
+            eventType: d['Event Type'] // Assuming CSV has an "Event Type" column
         })).filter(d => d.date); // Keep all rows with a valid date
 
         // Filter for mapTripsData with valid coordinates
@@ -79,16 +112,22 @@ function initTimeline() {
 // Map setup
 function initMap() {
     mapTripsData.forEach(trip => {
-        const marker = L.marker([trip.lat, trip.lng], {
-            icon: L.divIcon({
-                className: 'numbered-marker',
-                html: trip.id,
-                iconSize: [24, 24]
-            })
-        }).bindPopup(`
+        // Get icon and color based on eventType, with defaults
+        const iconName = iconMapping[trip.eventType] || 'question';
+        const markerColor = colorMapping[trip.eventType] || 'blue';
+        
+        // Create custom icon using Leaflet.awesome-markers
+        const customIcon = L.AwesomeMarkers.icon({
+            icon: iconName,
+            prefix: 'fa', // Use Font Awesome prefix
+            markerColor: markerColor
+        });
+
+        const marker = L.marker([trip.lat, trip.lng], { icon: customIcon }).bindPopup(`
             <div class="popup-event-date">${d3.timeFormat("%B %d, %Y")(trip.date)}</div>
             <div class="popup-short-summary">${trip.description}</div>
         `);
+        marker.tripId = trip.id; // Assign trip ID to marker for identification
         marker.on('click', () => focusTrip(trip.id));
         markers.addLayer(marker);
     });
@@ -149,7 +188,7 @@ function focusTrip(id) {
     if (!isNaN(trip.lat) && !isNaN(trip.lng)) {
         map.setView([trip.lat, trip.lng], 10);
         markers.eachLayer(marker => {
-            if (marker.options.icon.options.html === id.toString()) {
+            if (marker.tripId === id) {
                 marker.openPopup();
             }
         });
