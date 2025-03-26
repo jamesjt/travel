@@ -82,6 +82,7 @@ let focusedTrip = null;
 
 // D3 timeline global variables
 let svg, g, gX, iconGroups, xScale, height, margin;
+let eventsByDatePerRow = {}; // Global object to store eventsByDate for each row
 
 // Fetch and parse CSV data
 Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eAlZoYceevN7oqNyVsitp9SVUgrQtewIdesdfw8R2tQtFGigyCIPb6S7wxehA/pub?output=csv', {
@@ -176,6 +177,7 @@ function initTimeline() {
 
         // Group events by day
         const eventsByDate = d3.group(rowEvents, d => d3.timeDay(d.date));
+        eventsByDatePerRow[rowIndex] = eventsByDate; // Store globally for zoom access
 
         // Place icons for each date
         eventsByDate.forEach((events, date) => {
@@ -198,9 +200,10 @@ function initTimeline() {
                     .attr('text-anchor', 'middle') // Center horizontally
                     .attr('dominant-baseline', 'central') // Center vertically
                     .text(unicodeByIcon[iconMapping[event.eventType]]) // Set icon Unicode
-                    .datum(event) // Associate data with the element
+                    .datum({ event: event, rowIndex: rowIndex }) // Associate event and row index
                     .on('mouseover', function(event) {
-                        const eventData = d3.select(this).datum();
+                        const data = d3.select(this).datum();
+                        const eventData = data.event;
                         const tooltip = d3.select('#timeline-tooltip');
                         tooltip.style('display', 'block')
                             .html(`
@@ -236,15 +239,18 @@ function initTimeline() {
 
         // Update icon positions
         iconGroups.selectAll('.icon-text')
-            .attr('x', d => {
-                const date = d3.timeDay(d.date);
+            .attr('x', function(d) {
+                const rowIndex = d.rowIndex;
+                const event = d.event;
+                const eventsByDate = eventsByDatePerRow[rowIndex];
+                const date = d3.timeDay(event.date);
                 const events = eventsByDate.get(date) || [];
                 const n = events.length;
                 const iconSize = 12;
                 const gap = 2;
                 const totalWidth = n * iconSize + (n - 1) * gap;
                 const startX = newXScale(date) - totalWidth / 2 + iconSize / 2;
-                const i = events.indexOf(d);
+                const i = events.indexOf(event);
                 return i === -1 ? newXScale(date) : startX + i * (iconSize + gap);
             });
     }
@@ -256,17 +262,23 @@ function initTimeline() {
         xScale.range([0, newWidth]);
         gX.call(d3.axisBottom(xScale));
         iconGroups.selectAll('.icon-text')
-            .attr('x', d => {
-                const date = d3.timeDay(d.date);
+            .attr('x', function(d) {
+                const rowIndex = d.rowIndex;
+                const event = d.event;
+                const eventsByDate = eventsByDatePerRow[rowIndex];
+                const date = d3.timeDay(event.date);
                 const events = eventsByDate.get(date) || [];
                 const n = events.length;
                 const iconSize = 12;
                 const gap = 2;
                 const totalWidth = n * iconSize + (n - 1) * gap;
                 const startX = xScale(date) - totalWidth / 2 + iconSize / 2;
-                const i = events.indexOf(d);
+                const i = events.indexOf(event);
                 return i === -1 ? xScale(date) : startX + i * (iconSize + gap);
             });
+        // Update background rectangles
+        iconGroups.selectAll('rect')
+            .attr('width', newWidth);
         zoom.translateExtent([[0, 0], [newWidth, height]]);
         svg.call(zoom);
     });
