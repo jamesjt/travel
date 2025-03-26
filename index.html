@@ -1,1 +1,66 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Trips Explorer</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Leaflet.markercluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <!-- Header Section -->
+    <header id="header">
+        <nav class="menu">
+            <a href="#">Personal Trips Explorer</a>
+        </nav>
+    </header>
+    <!-- Timeline Selector -->
+    <div id="timeline-selector">
+        <div class="timeline-wrapper">
+            <!-- Removed timeline-select dropdown as only one timeline is needed -->
+            <div class="view-buttons">
+                <button class="view-btn active" data-view="map">Map</button>
+                <button class="view-btn" data-view="graph">Details</button>
+                <button class="view-btn" data-view="list">List</button>
+            </div>
+        </div>
+    </div>
+    <!-- Timeline Overlay -->
+    <div id="timeline">
+        <div class="timeline-bar">
+            <!-- D3 timeline will replace this -->
+        </div>
+    </div>
+    <!-- Main Content -->
+    <div id="main-content">
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <div id="event-list"></div>
+        </div>
+        <!-- Resize Handle -->
+        <div class="resize-handle"></div>
+        <!-- Right Content -->
+        <div id="right-content">
+            <div id="map" style="display: block;"></div>
+            <div id="graph-view" style="display: none;">Trip details will go here</div>
+            <div id="list-view" style="display: none;"></div>
+        </div>
+    </div>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Leaflet.markercluster JavaScript -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <!-- Papa Parse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
