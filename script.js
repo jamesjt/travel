@@ -42,8 +42,8 @@ const map = L.map('map', {
 
 // Initialize marker cluster group with adjusted clustering settings
 const markers = L.markerClusterGroup({
-    maxClusterRadius: 10, // Clusters form only when markers are within 40 pixels
-    disableClusteringAtZoom: 30 // No clustering at zoom level 15 and above
+    maxClusterRadius: 5, // Clusters form only when markers are within 40 pixels
+    disableClusteringAtZoom: 100 // No clustering at zoom level 15 and above
 });
 
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
