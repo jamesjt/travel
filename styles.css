@@ -176,8 +176,8 @@ body {
 }
 
 .toggle-indicator {
-    width: 6px;
-    height: 6px;
+    width: 16px;  /* Adjusted for SVG icon */
+    height: 16px;
     margin-right: 5px;
     transform: rotate(-90deg);
     transition: transform 0.2s ease;
