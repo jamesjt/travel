@@ -80,6 +80,9 @@ let allTripsData = []; // All rows with a valid date
 let mapTripsData = []; // Only rows with valid location data
 let focusedTrip = null;
 
+// D3 timeline global variables
+let svg, g, gX, iconGroups, xScale, height, margin;
+
 // Fetch and parse CSV data
 Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eAlZoYceevN7oqNyVsitp9SVUgrQtewIdesdfw8R2tQtFGigyCIPb6S7wxehA/pub?output=csv', {
     download: true,
@@ -118,32 +121,49 @@ function initTimeline() {
     }
 
     // Define layout parameters
-    const margin = { top: 20, right: 20, bottom: 30, left: 20 };
-    const rowHeight = 15; // Changed from 20px to 15px
-    const iconRowsHeight = rows.length * rowHeight; // 5 * 15 = 75px
-    const axisHeight = 30; // Space for the axis (reduced from timelineHeight of 70px since circles are removed)
-    const height = iconRowsHeight + axisHeight; // Total content height = 75 + 30 = 105px
-    const width = document.getElementById('timeline').offsetWidth - margin.left - margin.right;
+    margin = { top: 20, right: 20, bottom: 30, left: 20 };
+    const rowHeight = 15; // Height of each row
+    const iconRowsHeight = rows.length * rowHeight; // Total height for icon rows (5 * 15 = 75px)
+    const axisHeight = 30; // Space for the axis
+    height = iconRowsHeight + axisHeight; // Total content height (75 + 30 = 105px)
+    const timelineDiv = document.getElementById('timeline');
+    const width = timelineDiv.offsetWidth - margin.left - margin.right;
 
     // Create SVG with adjusted height
-    const svg = d3.select('.timeline-bar')
+    svg = d3.select('.timeline-bar')
         .append('svg')
         .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
-        .append('g')
+        .attr('height', height + margin.top + margin.bottom);
+
+    g = svg.append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    // Define x-scale for dates
-    const x = d3.scaleTime()
-        .domain(d3.extent(allTripsData, d => d.date))
+    // Define x-scale for dates with padding
+    const minDate = d3.min(allTripsData, d => d.date);
+    const maxDate = d3.max(allTripsData, d => d.date);
+    const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
+    xScale = d3.scaleTime()
+        .domain([new Date(minDate.getTime() - oneYearInMs), new Date(maxDate.getTime() + oneYearInMs)])
         .range([0, width]);
+
+    const xAxis = d3.axisBottom(xScale)
+        .ticks(d3.timeYear.every(1))
+        .tickFormat(d3.timeFormat('%Y'));
+
+    gX = g.append('g')
+        .attr('class', 'axis axis--x')
+        .attr('transform', `translate(0,${iconRowsHeight})`)
+        .call(xAxis);
+
+    iconGroups = g.append('g')
+        .attr('class', 'icon-group');
 
     // Add icon rows
     rows.forEach((row, rowIndex) => {
         const rowY = rowIndex * rowHeight;
 
         // Add background rectangle for the row
-        svg.append('rect')
+        iconGroups.append('rect')
             .attr('x', 0)
             .attr('y', rowY)
             .attr('width', width)
@@ -160,21 +180,21 @@ function initTimeline() {
         // Place icons for each date
         eventsByDate.forEach((events, date) => {
             const n = events.length; // Number of events on this date for this row
-            const iconSize = 12; // Reduced from 15px to 12px to scale with row height
-            const gap = 2; // Gap between icons (unchanged)
+            const iconSize = 12; // Icon size
+            const gap = 2; // Gap between icons
             const totalWidth = n * iconSize + (n - 1) * gap; // Total width for all icons
-            const startX = x(date) - totalWidth / 2 + iconSize / 2; // Center icons around date position
+            const startX = xScale(date) - totalWidth / 2 + iconSize / 2; // Center icons around date position
 
             events.forEach((event, i) => {
                 const xPos = startX + i * (iconSize + gap); // Position each icon side by side
                 const yPos = rowY + rowHeight / 2; // Center vertically in row
 
-                svg.append('text')
+                iconGroups.append('text')
                     .attr('class', 'icon-text') // Use CSS to set Font Awesome properties
                     .attr('x', xPos)
                     .attr('y', yPos)
                     .attr('fill', colorMapping[event.eventType]) // Match map marker color
-                    .attr('font-size', '12px') // Reduced from 15px to 12px
+                    .attr('font-size', '12px')
                     .attr('text-anchor', 'middle') // Center horizontally
                     .attr('dominant-baseline', 'central') // Center vertically
                     .text(unicodeByIcon[iconMapping[event.eventType]]) // Set icon Unicode
@@ -200,11 +220,56 @@ function initTimeline() {
         });
     });
 
-    // Add timeline axis below icon rows
-    svg.append('g')
-        .attr('transform', `translate(0,${iconRowsHeight})`) // Adjusted to sit directly below icon rows
-        .call(d3.axisBottom(x));
-    // Circles have been removed as per request
+    // Add zoom behavior
+    const zoom = d3.zoom()
+        .scaleExtent([0.1, 50]) // Allow zooming in and out within these limits
+        .translateExtent([[0, 0], [width, height]]) // Allow panning within the timeline bounds
+        .on('zoom', zoomed);
+
+    svg.call(zoom).call(zoom.transform, d3.zoomIdentity);
+
+    // Zoom handler function
+    function zoomed(event) {
+        const transform = event.transform;
+        const newXScale = transform.rescaleX(xScale);
+        gX.call(d3.axisBottom(newXScale));
+
+        // Update icon positions
+        iconGroups.selectAll('.icon-text')
+            .attr('x', d => {
+                const date = d3.timeDay(d.date);
+                const events = eventsByDate.get(date) || [];
+                const n = events.length;
+                const iconSize = 12;
+                const gap = 2;
+                const totalWidth = n * iconSize + (n - 1) * gap;
+                const startX = newXScale(date) - totalWidth / 2 + iconSize / 2;
+                const i = events.indexOf(d);
+                return i === -1 ? newXScale(date) : startX + i * (iconSize + gap);
+            });
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        const newWidth = timelineDiv.offsetWidth - margin.left - margin.right;
+        svg.attr('width', newWidth + margin.left + margin.right);
+        xScale.range([0, newWidth]);
+        gX.call(d3.axisBottom(xScale));
+        iconGroups.selectAll('.icon-text')
+            .attr('x', d => {
+                const date = d3.timeDay(d.date);
+                const events = eventsByDate.get(date) || [];
+                const n = events.length;
+                const iconSize = 12;
+                const gap = 2;
+                const totalWidth = n * iconSize + (n - 1) * gap;
+                const startX = xScale(date) - totalWidth / 2 + iconSize / 2;
+                const i = events.indexOf(d);
+                return i === -1 ? xScale(date) : startX + i * (iconSize + gap);
+            });
+        zoom.translateExtent([[0, 0], [newWidth, height]]);
+        svg.call(zoom);
+    });
 }
 
 // Map setup
