@@ -111,7 +111,7 @@ function initSidebar() {
         const yearDiv = sidebar.append('div').attr('class', 'year');
         const toggle = yearDiv.append('div')
             .attr('class', 'toggle')
-            .html(`<span class="toggle-indicator">▶</span>${year} <span class="event-count">${trips.length}</span>`)
+            .html(`<img src="icon-arrow-accordion.svg" class="toggle-indicator" alt="toggle"> ${year} <span class="event-count">${trips.length}</span>`)
             .on('click', function() {
                 const list = d3.select(this.nextElementSibling);
                 const isOpen = list.style('display') === 'block';
