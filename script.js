@@ -31,11 +31,50 @@ Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eA
         mapTripsData = allTripsData.filter(d => !isNaN(d.lat) && !isNaN(d.lng));
 
         // Initialize views
+        initTimeline();  // Initialize the timeline with allTripsData
         initSidebar();
         initMap();
         fitMapToBounds();
     }
 });
+
+// Timeline setup
+function initTimeline() {
+    if (allTripsData.length === 0) {
+        console.warn('No trip data available for timeline.');
+        return;
+    }
+
+    const margin = { top: 20, right: 20, bottom: 30, left: 20 };
+    const width = document.getElementById('timeline').offsetWidth - margin.left - margin.right;
+    const height = 120 - margin.top - margin.bottom;
+
+    const svg = d3.select('.timeline-bar')
+        .append('svg')
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleTime()
+        .domain(d3.extent(allTripsData, d => d.date))
+        .range([0, width]);
+
+    svg.append('g')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x));
+
+    svg.selectAll('.trip')
+        .data(allTripsData)
+        .enter()
+        .append('circle')
+        .attr('class', 'trip')
+        .attr('cx', d => x(d.date))
+        .attr('cy', height / 2)
+        .attr('r', 5)
+        .attr('fill', '#3498db')
+        .on('click', (event, d) => focusTrip(d.id));
+}
 
 // Map setup
 function initMap() {
