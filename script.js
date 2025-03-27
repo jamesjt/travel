@@ -235,7 +235,19 @@ function initTimeline() {
     function zoomed(event) {
         const transform = event.transform;
         const newXScale = transform.rescaleX(xScale);
-        gX.call(d3.axisBottom(newXScale));
+
+        // Dynamic tick generation based on zoom level
+        let ticks;
+        if (transform.k > 10) {
+            ticks = d3.timeDay.every(1); // Show every day
+        } else if (transform.k > 5) {
+            ticks = d3.timeWeek.every(1); // Show every week
+        } else {
+            ticks = d3.timeMonth.every(1); // Show every month
+        }
+
+        const xAxis = d3.axisBottom(newXScale).ticks(ticks);
+        gX.call(xAxis);
 
         // Update icon positions
         iconGroups.selectAll('.icon-text')
