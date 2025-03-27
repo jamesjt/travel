@@ -1,119 +1,3 @@
-// script.js
-
-// Define icon mappings for event types using Font Awesome icons
-const iconMapping = {
-    'Travel - Plane': 'plane',
-    'Travel - Car': 'car',
-    'Travel - Bike': 'bicycle',
-    'Travel - Boat': 'ship',
-    'Breakfast': 'utensils',
-    'Lunch': 'utensils',
-    'Dinner': 'utensils',
-    'Drinks': 'cocktail',
-    'Cafe': 'coffee',
-    'Ruins': 'archway',
-    'Museum': 'landmark',
-    'Hotel': 'bed',
-    'Walk': 'walking'
-};
-
-// Define color mappings for event types
-const colorMapping = {
-    'Travel - Plane': 'black',
-    'Travel - Car': 'black',
-    'Travel - Bike': 'black',
-    'Travel - Boat': 'black',
-    'Breakfast': 'red',
-    'Lunch': 'red',
-    'Dinner': 'red',
-    'Drinks': 'red',
-    'Cafe': 'red',
-    'Ruins': 'blue',
-    'Museum': 'blue',
-    'Hotel': 'gray',
-    'Walk': 'green'
-};
-
-// Define rows with their colors and event types for the timeline
-// Updated order: travel, hotel, meals, ruins/museums, walk
-const rows = [
-    { color: 'black', types: ['Travel - Plane', 'Travel - Car', 'Travel - Bike', 'Travel - Boat'] },
-    { color: 'gray', types: ['Hotel'] },
-    { color: 'red', types: ['Breakfast', 'Lunch', 'Dinner', 'Drinks', 'Cafe'] },
-    { color: 'blue', types: ['Ruins', 'Museum'] },
-    { color: 'green', types: ['Walk'] }
-];
-
-// Define Unicode mappings for Font Awesome icons
-const unicodeByIcon = {
-    'plane': '\uf072',
-    'car': '\uf1b9',
-    'bicycle': '\uf206',
-    'ship': '\uf21a',
-    'utensils': '\uf2e7',
-    'cocktail': '\uf561',
-    'coffee': '\uf0f4',
-    'archway': '\uf557',
-    'landmark': '\uf66f',
-    'bed': '\uf236',
-    'walking': '\uf554'
-};
-
-// Initialize map with smooth zoom options
-const map = L.map('map', {
-    zoomAnimation: true, // Enable smooth zoom transitions
-    zoomSnap: 1 // Finer zoom increments (half levels)
-}).setView([20, 0], 2); // Default world view
-
-// Initialize marker cluster group with adjusted clustering settings
-const markers = L.markerClusterGroup({
-    maxClusterRadius: 1, // Clusters form only when markers are within X pixels
-    disableClusteringAtZoom: 5 // No clustering at zoom level 15 and above
-});
-
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
-}).addTo(map);
-
-// Global variables
-let allTripsData = []; // All rows with a valid date
-let mapTripsData = []; // Only rows with valid location data
-let focusedTrip = null;
-
-// D3 timeline global variables
-let svg, g, gX, iconGroups, xScale, height, margin;
-let eventsByDatePerRow = {}; // Global object to store eventsByDate for each row
-
-// Fetch and parse CSV data
-Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eAlZoYceevN7oqNyVsitp9SVUgrQtewIdesdfw8R2tQtFGigyCIPb6S7wxehA/pub?output=csv', {
-    download: true,
-    header: true,
-    complete: function(results) {
-        // Parse all rows into allTripsData, including eventType
-        allTripsData = results.data.map((d, i) => ({
-            id: i + 1,
-            date: d3.timeParse("%B %d, %Y")(d.Date),
-            lat: parseFloat(d.Latitude),
-            lng: parseFloat(d.Longitude),
-            summary: d.Summary || 'No summary',
-            description: d.Description || 'No description',
-            review: d.Review || 'No review',
-            rating: d.Rating || 'No rating',
-            photos: d.Photos || '',
-            eventType: d['Event Type'] // Assuming CSV has an "Event Type" column
-        })).filter(d => d.date); // Keep all rows with a valid date
-
-        // Filter for mapTripsData with valid coordinates
-        mapTripsData = allTripsData.filter(d => !isNaN(d.lat) && !isNaN(d.lng));
-
-        // Initialize views
-        initTimeline();  // Initialize the timeline with allTripsData
-        initSidebar();
-        initMap();
-        fitMapToBounds();
-    }
-});
-
 // Timeline setup
 function initTimeline() {
     if (allTripsData.length === 0) {
@@ -235,7 +119,19 @@ function initTimeline() {
     function zoomed(event) {
         const transform = event.transform;
         const newXScale = transform.rescaleX(xScale);
-        gX.call(d3.axisBottom(newXScale));
+
+        // Dynamic tick generation based on zoom level
+        let ticks;
+        if (transform.k > 10) {
+            ticks = d3.timeDay.every(1); // Show every day at the most zoomed-in level
+        } else if (transform.k > 5) {
+            ticks = d3.timeWeek.every(1); // Show every week at medium zoom
+        } else {
+            ticks = d3.timeMonth.every(1); // Show every month at lower zoom
+        }
+
+        const xAxis = d3.axisBottom(newXScale).ticks(ticks);
+        gX.call(xAxis);
 
         // Update icon positions
         iconGroups.selectAll('.icon-text')
@@ -282,92 +178,4 @@ function initTimeline() {
         zoom.translateExtent([[0, 0], [newWidth, height]]);
         svg.call(zoom);
     });
-}
-
-// Map setup
-function initMap() {
-    mapTripsData.forEach(trip => {
-        // Get icon and color based on eventType, with defaults
-        const iconName = iconMapping[trip.eventType] || 'question';
-        const markerColor = colorMapping[trip.eventType] || 'blue';
-        
-        // Create custom icon using Leaflet.awesome-markers
-        const customIcon = L.AwesomeMarkers.icon({
-            icon: iconName,
-            prefix: 'fa', // Use Font Awesome prefix
-            markerColor: markerColor
-        });
-
-        const marker = L.marker([trip.lat, trip.lng], { icon: customIcon }).bindPopup(`
-            <div class="popup-event-date">${d3.timeFormat("%B %d, %Y")(trip.date)}</div>
-            <div class="popup-short-summary">${trip.summary}</div>
-        `);
-        marker.tripId = trip.id; // Assign trip ID to marker for identification
-        marker.on('click', () => focusTrip(trip.id));
-        markers.addLayer(marker);
-    });
-    map.addLayer(markers);
-}
-
-function fitMapToBounds() {
-    if (mapTripsData.length > 0) {
-        const bounds = L.latLngBounds(mapTripsData.map(t => [t.lat, t.lng]));
-        map.fitBounds(bounds, { padding: [50, 50] });
-    }
-}
-
-// Sidebar setup
-function initSidebar() {
-    const byYear = d3.group(allTripsData, d => d.date.getFullYear());
-    const sidebar = d3.select('#event-list');
-
-    byYear.forEach((trips, year) => {
-        const yearDiv = sidebar.append('div').attr('class', 'year');
-        const toggle = yearDiv.append('div')
-            .attr('class', 'toggle')
-            .html(`<img src="icon-arrow-accordion.svg" class="toggle-indicator" alt="toggle"> ${year} <span class="event-count">${trips.length}</span>`)
-            .on('click', function() {
-                const list = d3.select(this.nextElementSibling);
-                const isOpen = list.style('display') === 'block';
-                list.style('display', isOpen ? 'none' : 'block');
-                d3.select(this).classed('open', !isOpen);
-            });
-
-        const yearList = yearDiv.append('div').attr('class', 'year-list');
-        trips.forEach(trip => {
-            yearList.append('div')
-                .attr('class', 'event-container')
-                .html(`
-                    <div class="state-icons"><div class="state-icon active"></div></div>
-                    <div class="event-item" data-id="${trip.id}">
-                        <div class="event-date"><span class="event-number-circle">${trip.id}</span>${d3.timeFormat("%B %d")(trip.date)}</div>
-                        <div class="event-summary">${trip.summary}</div>
-                    </div>
-                `)
-                .on('click', () => focusTrip(trip.id));
-        });
-    });
-}
-
-// Focus trip across views
-function focusTrip(id) {
-    if (focusedTrip === id) return;
-    focusedTrip = id;
-
-    // Update sidebar highlight
-    d3.selectAll('.event-item').classed('focused', false);
-    d3.select(`.event-item[data-id="${id}"]`).classed('focused', true);
-
-    // Center map if location data exists
-    const trip = allTripsData.find(t => t.id === id);
-    if (!isNaN(trip.lat) && !isNaN(trip.lng)) {
-        map.setView([trip.lat, trip.lng], 10);
-        markers.eachLayer(marker => {
-            if (marker.tripId === id) {
-                marker.openPopup();
-            }
-        });
-    } else {
-        console.log('No location data for this trip. Map not centered.');
-    }
 }
