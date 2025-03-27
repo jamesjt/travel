@@ -235,9 +235,21 @@ function initTimeline() {
     function zoomed(event) {
         const transform = event.transform;
         const newXScale = transform.rescaleX(xScale);
-        gX.call(d3.axisBottom(newXScale));
 
-        // Update icon positions
+        // Dynamic tick generation based on zoom level
+        let ticks;
+        if (transform.k > 10) {
+            ticks = d3.timeDay.every(1); // Show every day
+        } else if (transform.k > 5) {
+            ticks = d3.timeWeek.every(1); // Show every week
+        } else {
+            ticks = d3.timeMonth.every(1); // Show every month
+        }
+
+        const xAxis = d3.axisBottom(newXScale).ticks(ticks);
+        gX.call(xAxis);
+
+        // Update icon positions with overlap adjustment
         iconGroups.selectAll('.icon-text')
             .attr('x', function(d) {
                 const rowIndex = d.rowIndex;
@@ -252,6 +264,20 @@ function initTimeline() {
                 const startX = newXScale(date) - totalWidth / 2 + iconSize / 2;
                 const i = events.indexOf(event);
                 return i === -1 ? newXScale(date) : startX + i * (iconSize + gap);
+            })
+            .attr('y', function(d) {
+                const rowIndex = d.rowIndex;
+                const rowY = rowIndex * rowHeight; // Base Y position for the row
+                const eventsOnSameDate = allTripsData.filter(e => 
+                    d3.timeDay(e.date).getTime() === d3.timeDay(d.event.date).getTime() && 
+                    rows[rowIndex].types.includes(e.eventType)
+                );
+                if (eventsOnSameDate.length > 1) {
+                    const index = eventsOnSameDate.indexOf(d.event);
+                    const offset = (index - (eventsOnSameDate.length - 1) / 2) * 5; // Vertical offset
+                    return rowY + rowHeight / 2 + offset; // Center with offset
+                }
+                return rowY + rowHeight / 2; // Center vertically in the row
             });
     }
 
