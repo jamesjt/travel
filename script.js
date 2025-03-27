@@ -315,7 +315,21 @@ function initMap() {
             <div class="popup-short-summary">${trip.summary}</div>
         `);
         marker.tripId = trip.id; // Assign trip ID to marker for identification
-        marker.on('click', () => focusTrip(trip.id));
+
+        // Add hover functionality
+        marker.on('mouseover', function() {
+            this.openPopup(); // Show popup on hover
+        });
+        marker.on('mouseout', function() {
+            this.closePopup(); // Hide popup when hover ends
+        });
+
+        // Keep click functionality
+        marker.on('click', function() {
+            focusTrip(trip.id); // Focus the trip (e.g., highlight in sidebar, center map)
+            this.openPopup(); // Ensure popup stays open after clicking
+        });
+
         markers.addLayer(marker);
     });
     map.addLayer(markers);
