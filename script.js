@@ -84,6 +84,16 @@ let focusedTrip = null;
 let svg, g, gX, iconGroups, xScale, height, margin;
 let eventsByDatePerRow = {}; // Global object to store eventsByDate for each row
 
+// Function to convert Google Drive view link to direct download URL
+function convertGoogleDriveUrl(viewUrl) {
+    const fileIdMatch = viewUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileIdMatch) {
+        const fileId = fileIdMatch[1];
+        return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    }
+    return viewUrl; // Return original URL if it doesn't match the expected format
+}
+
 // Fetch and parse CSV data
 Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eAlZoYceevN7oqNyVsitp9SVUgrQtewIdesdfw8R2tQtFGigyCIPb6S7wxehA/pub?output=csv', {
     download: true,
@@ -356,7 +366,7 @@ function fitMapToBounds() {
     }
 }
 
-// Sidebar setup with photo display
+// Sidebar setup with photo display and HEIC conversion
 function initSidebar() {
     const byYear = d3.group(allTripsData, d => d.date.getFullYear());
     const sidebar = d3.select('#event-list');
@@ -400,18 +410,50 @@ function initSidebar() {
                     .attr('class', 'event-photos');
 
                 photoUrls.forEach(url => {
-                    photosDiv.append('img')
+                    // Convert Google Drive view link to direct download URL
+                    const directUrl = convertGoogleDriveUrl(url);
+
+                    // Create the image element
+                    const img = photosDiv.append('img')
                         .attr('class', 'event-photo')
-                        .attr('src', url)
-                        .attr('alt', 'Event photo')
-                        .on('click', () => {
-                            // Open the image in a new tab
-                            window.open(url, '_blank');
+                        .attr('alt', 'Event photo');
+
+                    // Fetch the image as a blob
+                    fetch(directUrl)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            if (blob.type === 'image/heic' || blob.type === 'image/heif') {
+                                // Convert HEIC to JPEG using heic2any
+                                heic2any({ blob: blob, toType: 'image/jpeg' })
+                                    .then(convertedBlob => {
+                                        const convertedUrl = URL.createObjectURL(convertedBlob);
+                                        img.attr('src', convertedUrl)
+                                            .on('click', () => {
+                                                window.open(convertedUrl, '_blank');
+                                            });
+                                    })
+                                    .catch(err => {
+                                        console.warn(`Failed to convert HEIC image: ${directUrl}`, err);
+                                        img.remove();
+                                        photosDiv.append('div')
+                                            .attr('class', 'event-photo-fallback')
+                                            .text('Image unavailable');
+                                    });
+                            } else {
+                                // Not HEIC, use the blob directly
+                                const blobUrl = URL.createObjectURL(blob);
+                                img.attr('src', blobUrl)
+                                    .on('click', () => {
+                                        window.open(blobUrl, '_blank');
+                                    });
+                            }
                         })
-                        .on('error', function() {
-                            // Handle broken image links
-                            d3.select(this).remove();
-                            console.warn(`Failed to load image: ${url}`);
+                        .catch(err => {
+                            console.warn(`Failed to load image: ${directUrl}`, err);
+                            img.remove();
+                            photosDiv.append('div')
+                                .attr('class', 'event-photo-fallback')
+                                .text('Image unavailable');
                         });
                 });
             }
