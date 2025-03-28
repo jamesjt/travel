@@ -296,7 +296,7 @@ function initTimeline() {
     });
 }
 
-// Map setup
+// Map setup with updated event handling
 function initMap() {
     mapTripsData.forEach(trip => {
         // Get icon and color based on eventType, with defaults
@@ -318,21 +318,35 @@ function initMap() {
 
         // Add hover functionality
         marker.on('mouseover', function() {
-            this.openPopup(); // Show popup on hover
+            if (!this.getPopup().isOpen()) { // Only open if not already open
+                this.openPopup();
+                this._openedViaHover = true;
+            }
         });
         marker.on('mouseout', function() {
-            this.closePopup(); // Hide popup when hover ends
+            if (this._openedViaHover) { // Only close if opened via hover
+                this.closePopup();
+                this._openedViaHover = false;
+            }
         });
 
         // Keep click functionality
         marker.on('click', function() {
             focusTrip(trip.id); // Focus the trip (e.g., highlight in sidebar, center map)
-            this.openPopup(); // Ensure popup stays open after clicking
+            this.openPopup(); // Open popup and mark as not hover-triggered
+            this._openedViaHover = false;
         });
 
         markers.addLayer(marker);
     });
     map.addLayer(markers);
+
+    // Optional: Reset flag on popup close for robustness
+    map.on('popupclose', function(e) {
+        if (e.popup._source) {
+            e.popup._source._openedViaHover = false;
+        }
+    });
 }
 
 function fitMapToBounds() {
