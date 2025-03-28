@@ -303,35 +303,94 @@ body {
 
 /* Photos section in the sidebar */
 .event-photos {
-    margin-top: 10px;
+    position: relative;
+    width: 300px; /* 3 photos * 100px width */
+    height: 100px;
+    overflow: hidden;
+    margin-top: 10px; /* Space below the event summary */
+}
+
+.photos-wrapper {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    transition: transform 0.3s ease; /* Smooth sliding animation */
 }
 
 .event-photo {
     width: 100px;
     height: 100px;
-    object-fit: cover;
-    border-radius: 5px;
-    border: 1px solid #ddd;
+    object-fit: cover; /* Ensures photos fill the space nicely */
     cursor: pointer;
+    margin-right: 10px; /* Space between photos */
 }
 
-.event-photo:hover {
-    opacity: 0.8;
+.prev-arrow, .next-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
 }
 
-.event-photo-fallback {
-    width: 100px;
-    height: 100px;
-    border-radius: 5px;
-    border: 1px solid #ddd;
-    background-color: #f0f0f0;
+.prev-arrow {
+    left: 0;
+}
+
+.next-arrow {
+    right: 0;
+}
+
+/* Photo Overlay */
+#photo-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8); /* Semi-transparent black background */
+    z-index: 1000; /* Ensures overlay is above other content */
+}
+
+.overlay-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.photo-container {
+    position: relative;
+    width: 80%;
+    max-width: 800px;
+    margin: 50px auto; /* Centers the container vertically and horizontally */
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #666;
-    font-size: 12px;
-    text-align: center;
 }
+
+#overlay-photo {
+    max-width: 100%;
+    max-height: 80vh; /* Limits height to 80% of viewport height */
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* Overlay navigation arrows reuse the .prev-arrow and .next-arrow classes */
+#photo-overlay .prev-arrow, #photo-overlay .next-arrow {
+    color: white;
+    font-size: 32px;
+}
+
+/* Removed .event-photo-fallback and related hover styles as they are handled in JS */
