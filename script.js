@@ -84,12 +84,16 @@ let focusedTrip = null;
 let svg, g, gX, iconGroups, xScale, height, margin;
 let eventsByDatePerRow = {}; // Global object to store eventsByDate for each row
 
-// Function to convert Google Drive view link to thumbnail URL
-function convertGoogleDriveUrl(viewUrl) {
+// Function to convert Google Drive view link to thumbnail or full image URL
+function convertGoogleDriveUrl(viewUrl, type = 'thumbnail') {
     const fileIdMatch = viewUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (fileIdMatch) {
         const fileId = fileIdMatch[1];
-        return `https://drive.google.com/thumbnail?id=${fileId}`;
+        if (type === 'thumbnail') {
+            return `https://drive.google.com/thumbnail?id=${fileId}&sz=w100`;
+        } else {
+            return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        }
     }
     return viewUrl; // Return original URL if it doesn't match the expected format
 }
@@ -425,21 +429,46 @@ function initSidebar() {
                     const photosDiv = eventItem.append('div')
                         .attr('class', 'event-photos');
 
-                    photoUrls.forEach(url => {
-                        const thumbnailUrl = convertGoogleDriveUrl(url);
-                        photosDiv.append('img')
+                    const wrapper = photosDiv.append('div')
+                        .attr('class', 'photos-wrapper');
+
+                    // Append all photos to the wrapper
+                    photoUrls.forEach((url, index) => {
+                        const thumbnailUrl = convertGoogleDriveUrl(url, 'thumbnail');
+                        wrapper.append('img')
                             .attr('class', 'event-photo')
                             .attr('src', thumbnailUrl)
                             .attr('alt', 'Event photo')
-                            .on('click', () => window.open(url, '_blank'))
-                            .on('error', function() {
-                                d3.select(this).remove();
-                                photosDiv.append('div')
-                                    .attr('class', 'event-photo-fallback')
-                                    .text('Image unavailable');
-                                console.warn(`Failed to load image: ${thumbnailUrl}`);
-                            });
+                            .on('click', () => openOverlay(photoUrls, index));
                     });
+
+                    // Add navigation arrows if there are more than 3 photos
+                    if (photoUrls.length > 3) {
+                        const prevArrow = photosDiv.append('button')
+                            .attr('class', 'prev-arrow')
+                            .html('<');
+                        const nextArrow = photosDiv.append('button')
+                            .attr('class', 'next-arrow')
+                            .html('>');
+
+                        let currentIndex = 0;
+                        const photoWidth = 100; // Width of each photo
+                        const maxIndex = photoUrls.length - 3; // Maximum index to show 3 photos
+
+                        nextArrow.on('click', () => {
+                            if (currentIndex < maxIndex) {
+                                currentIndex++;
+                                wrapper.style('transform', `translateX(-${currentIndex * photoWidth}px)`);
+                            }
+                        });
+
+                        prevArrow.on('click', () => {
+                            if (currentIndex > 0) {
+                                currentIndex--;
+                                wrapper.style('transform', `translateX(-${currentIndex * photoWidth}px)`);
+                            }
+                        });
+                    }
                 }
             });
         });
@@ -471,3 +500,47 @@ function focusTrip(id) {
         console.log('No location data for this trip. Map not centered.');
     }
 }
+
+// Overlay functions
+let currentPhotos = [];
+let currentIndex = 0;
+
+function openOverlay(photos, index) {
+    currentPhotos = photos;
+    currentIndex = index;
+    const overlay = d3.select('#photo-overlay');
+    overlay.style('display', 'block');
+    updateOverlayPhoto();
+}
+
+function updateOverlayPhoto() {
+    const photoUrl = convertGoogleDriveUrl(currentPhotos[currentIndex], 'full');
+    d3.select('#overlay-photo').attr('src', photoUrl);
+}
+
+function nextPhoto() {
+    if (currentIndex < currentPhotos.length - 1) {
+        currentIndex++;
+        updateOverlayPhoto();
+    }
+}
+
+function prevPhoto() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        updateOverlayPhoto();
+    }
+}
+
+function closeOverlay() {
+    d3.select('#photo-overlay').style('display', 'none');
+}
+
+// Set up overlay event listeners
+d3.select('.photo-container .next-arrow').on('click', nextPhoto);
+d3.select('.photo-container .prev-arrow').on('click', prevPhoto);
+d3.select('.close-button').on('click', closeOverlay);
+d3.select('.overlay-background').on('click', closeOverlay);
+d3.select('.photo-container').on('click', function(event) {
+    event.stopPropagation(); // Prevents closing when clicking the photo or arrows
+});
