@@ -84,12 +84,12 @@ let svg, g, gX, iconGroups, xScale, height, margin;
 let eventsByDatePerRow = {};
 
 // Function to convert Google Drive view link to thumbnail or full image URL
-function convertGoogleDriveUrl(viewUrl, type = 'thumbnail') {
+function convertGoogleDriveUrl(viewUrl, type = 'thumbnail', size = 100) {
     const fileIdMatch = viewUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (fileIdMatch) {
         const fileId = fileIdMatch[1];
         if (type === 'thumbnail') {
-            return `https://drive.google.com/thumbnail?id=${fileId}&sz=w100`;
+            return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${size}`;
         } else {
             return `https://drive.google.com/uc?export=view&id=${fileId}`;
         }
@@ -124,7 +124,7 @@ Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eA
     }
 });
 
-// Timeline setup (unchanged)
+// Timeline setup
 function initTimeline() {
     if (allTripsData.length === 0) {
         console.warn('No trip data available for timeline.');
@@ -291,7 +291,7 @@ function initTimeline() {
     });
 }
 
-// Map setup (unchanged)
+// Map setup
 function initMap() {
     mapTripsData.forEach(trip => {
         const iconName = iconMapping[trip.eventType] || 'question';
@@ -346,7 +346,7 @@ function fitMapToBounds() {
     }
 }
 
-// Sidebar setup with updated photo positioning
+// Sidebar setup with photo positioning
 function initSidebar() {
     const byYear = d3.group(allTripsData, d => d.date.getFullYear());
     const sidebar = d3.select('#event-list');
@@ -451,7 +451,7 @@ function initSidebar() {
     });
 }
 
-// Focus trip across views (unchanged)
+// Focus trip across views
 function focusTrip(id) {
     if (focusedTrip === id) return;
     focusedTrip = id;
@@ -488,12 +488,16 @@ function openOverlay(photos, index) {
 }
 
 function updateOverlayPhoto() {
-    const photoUrl = convertGoogleDriveUrl(currentPhotos[currentIndex], 'full');
+    const photoUrl = convertGoogleDriveUrl(currentPhotos[currentIndex], 'thumbnail', 800); // Use larger thumbnail for overlay
     const overlayPhoto = d3.select('#overlay-photo');
+    console.log('Setting overlay image to:', photoUrl); // Debug log
     overlayPhoto.attr('src', photoUrl)
+        .on('load', function() {
+            console.log('Overlay image loaded successfully');
+        })
         .on('error', function() {
-            overlayPhoto.attr('src', 'path/to/fallback-image.jpg'); // Replace with your fallback image path
             console.warn('Failed to load overlay image:', photoUrl);
+            overlayPhoto.attr('src', 'images/fallback.jpg'); // Update with your actual fallback image path
         });
 }
 
