@@ -99,7 +99,7 @@ Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_E4hP9hOaj5i-jn0eA
             description: d.Description || 'No description',
             review: d.Review || 'No review',
             rating: d.Rating || 'No rating',
-            photos: d.Photos || '',
+            photos: d.Photos || '', // Assuming 'Photos' contains comma-separated image URLs
             eventType: d['Event Type'] // Assuming CSV has an "Event Type" column
         })).filter(d => d.date); // Keep all rows with a valid date
 
@@ -356,7 +356,7 @@ function fitMapToBounds() {
     }
 }
 
-// Sidebar setup
+// Sidebar setup with photo display
 function initSidebar() {
     const byYear = d3.group(allTripsData, d => d.date.getFullYear());
     const sidebar = d3.select('#event-list');
@@ -375,16 +375,46 @@ function initSidebar() {
 
         const yearList = yearDiv.append('div').attr('class', 'year-list');
         trips.forEach(trip => {
-            yearList.append('div')
-                .attr('class', 'event-container')
+            const eventContainer = yearList.append('div')
+                .attr('class', 'event-container');
+
+            // Add the basic event info
+            const eventItem = eventContainer.append('div')
+                .attr('class', 'event-item')
+                .attr('data-id', trip.id)
                 .html(`
-                    <div class="state-icons"><div class="state-icon active"></div></div>
-                    <div class="event-item" data-id="${trip.id}">
-                        <div class="event-date"><span class="event-number-circle">${trip.id}</span>${d3.timeFormat("%B %d")(trip.date)}</div>
-                        <div class="event-summary">${trip.summary}</div>
-                    </div>
+                    <div class="event-date"><span class="event-number-circle">${trip.id}</span>${d3.timeFormat("%B %d")(trip.date)}</div>
+                    <div class="event-summary">${trip.summary}</div>
                 `)
                 .on('click', () => focusTrip(trip.id));
+
+            // Add state icons
+            eventContainer.insert('div', '.event-item')
+                .attr('class', 'state-icons')
+                .html('<div class="state-icon active"></div>');
+
+            // Check if the Photos column is non-empty and display photos
+            if (trip.photos && trip.photos.trim() !== '') {
+                const photoUrls = trip.photos.split(',').map(url => url.trim());
+                const photosDiv = eventItem.append('div')
+                    .attr('class', 'event-photos');
+
+                photoUrls.forEach(url => {
+                    photosDiv.append('img')
+                        .attr('class', 'event-photo')
+                        .attr('src', url)
+                        .attr('alt', 'Event photo')
+                        .on('click', () => {
+                            // Open the image in a new tab
+                            window.open(url, '_blank');
+                        })
+                        .on('error', function() {
+                            // Handle broken image links
+                            d3.select(this).remove();
+                            console.warn(`Failed to load image: ${url}`);
+                        });
+                });
+            }
         });
     });
 }
