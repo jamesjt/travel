@@ -483,22 +483,36 @@ function openOverlay(photos, index) {
     currentPhotos = photos;
     currentIndex = index;
     const overlay = d3.select('#photo-overlay');
+    console.log('Opening overlay'); // Debug log
     overlay.style('display', 'block');
     updateOverlayPhoto();
 }
 
 function updateOverlayPhoto() {
-    const photoUrl = convertGoogleDriveUrl(currentPhotos[currentIndex], 'thumbnail', 800); // Use larger thumbnail for overlay
+    const photoUrl = convertGoogleDriveUrl(currentPhotos[currentIndex], 'thumbnail', 800);
     const overlayPhoto = d3.select('#overlay-photo');
-    console.log('Setting overlay image to:', photoUrl); // Debug log
-    overlayPhoto.attr('src', photoUrl)
-        .on('load', function() {
-            console.log('Overlay image loaded successfully');
-        })
-        .on('error', function() {
-            console.warn('Failed to load overlay image:', photoUrl);
-            overlayPhoto.attr('src', 'images/fallback.jpg'); // Update with your actual fallback image path
-        });
+    const imgElement = overlayPhoto.node();
+
+    // Hide the image initially
+    overlayPhoto.style('display', 'none');
+
+    // Clear previous event listeners to avoid duplicates
+    imgElement.onload = null;
+    imgElement.onerror = null;
+
+    // Set the src
+    overlayPhoto.attr('src', photoUrl);
+
+    // Attach load and error event listeners
+    imgElement.onload = function() {
+        console.log('Overlay image loaded successfully');
+        overlayPhoto.style('display', 'block'); // Show when loaded
+    };
+    imgElement.onerror = function() {
+        console.warn('Failed to load overlay image:', photoUrl);
+        overlayPhoto.attr('src', 'images/fallback.jpg'); // Update with your actual fallback image path
+        overlayPhoto.style('display', 'block'); // Show fallback
+    };
 }
 
 function nextPhoto() {
