@@ -374,8 +374,11 @@ body {
 }
 
 #overlay-photo {
+    display: none; /* Hide initially until loaded */
     max-width: 100%;
     max-height: 80vh;
+    object-fit: contain; /* Ensure image fits properly */
+    /* border: 2px solid red; */ /* Temporary for debugging */
 }
 
 .close-button {
