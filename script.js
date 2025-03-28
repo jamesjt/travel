@@ -366,7 +366,7 @@ function fitMapToBounds() {
     }
 }
 
-// Sidebar setup with photo display using thumbnail URLs
+// Sidebar setup with day containers and collapsible events
 function initSidebar() {
     const byYear = d3.group(allTripsData, d => d.date.getFullYear());
     const sidebar = d3.select('#event-list');
@@ -384,47 +384,64 @@ function initSidebar() {
             });
 
         const yearList = yearDiv.append('div').attr('class', 'year-list');
-        trips.forEach(trip => {
-            const eventContainer = yearList.append('div')
-                .attr('class', 'event-container');
+        const byDay = d3.group(trips, d => d3.timeFormat("%B %d, %Y")(d.date));
 
-            // Add the basic event info
-            const eventItem = eventContainer.append('div')
-                .attr('class', 'event-item')
-                .attr('data-id', trip.id)
-                .html(`
-                    <div class="event-date"><span class="event-number-circle">${trip.id}</span>${d3.timeFormat("%B %d")(trip.date)}</div>
-                    <div class="event-summary">${trip.summary}</div>
-                `)
-                .on('click', () => focusTrip(trip.id));
+        byDay.forEach((dayTrips, date) => {
+            const dayContainer = yearList.append('div')
+                .attr('class', 'day-container');
 
-            // Add state icons
-            eventContainer.insert('div', '.event-item')
-                .attr('class', 'state-icons')
-                .html('<div class="state-icon active"></div>');
-
-            // Check if the Photos column is non-empty and display photos
-            if (trip.photos && trip.photos.trim() !== '') {
-                const photoUrls = trip.photos.split(',').map(url => url.trim());
-                const photosDiv = eventItem.append('div')
-                    .attr('class', 'event-photos');
-
-                photoUrls.forEach(url => {
-                    const thumbnailUrl = convertGoogleDriveUrl(url);
-                    photosDiv.append('img')
-                        .attr('class', 'event-photo')
-                        .attr('src', thumbnailUrl)
-                        .attr('alt', 'Event photo')
-                        .on('click', () => window.open(url, '_blank'))
-                        .on('error', function() {
-                            d3.select(this).remove();
-                            photosDiv.append('div')
-                                .attr('class', 'event-photo-fallback')
-                                .text('Image unavailable');
-                            console.warn(`Failed to load image: ${thumbnailUrl}`);
-                        });
+            // Add the date to the day container with collapsible functionality
+            const dayDate = dayContainer.append('div')
+                .attr('class', 'day-date')
+                .html(`<span class="event-date">${date}</span> <img src="icon-arrow-accordion.svg" class="toggle-indicator" alt="toggle">`)
+                .on('click', function() {
+                    const events = d3.select(this.nextElementSibling);
+                    const isOpen = events.style('display') === 'block';
+                    events.style('display', isOpen ? 'none' : 'block');
+                    d3.select(this).select('.toggle-indicator').style('transform', isOpen ? 'rotate(-90deg)' : 'rotate(0deg)');
                 });
-            }
+
+            const eventsContainer = dayContainer.append('div')
+                .attr('class', 'events-container')
+                .style('display', 'none'); // Initially collapsed
+
+            dayTrips.forEach(trip => {
+                const eventItem = eventsContainer.append('div')
+                    .attr('class', 'event-item')
+                    .attr('data-id', trip.id)
+                    .html(`
+                        <div class="event-icon"><i class="fas fa-${iconMapping[trip.eventType]}"></i></div>
+                        <div class="event-summary">${trip.summary}</div>
+                    `)
+                    .on('click', () => focusTrip(trip.id));
+
+                // Dynamically set icon color based on event type
+                eventItem.select('.event-icon i')
+                    .style('color', colorMapping[trip.eventType] || '#3498db');
+
+                // Check if the Photos column is non-empty and display photos
+                if (trip.photos && trip.photos.trim() !== '') {
+                    const photoUrls = trip.photos.split(',').map(url => url.trim());
+                    const photosDiv = eventItem.append('div')
+                        .attr('class', 'event-photos');
+
+                    photoUrls.forEach(url => {
+                        const thumbnailUrl = convertGoogleDriveUrl(url);
+                        photosDiv.append('img')
+                            .attr('class', 'event-photo')
+                            .attr('src', thumbnailUrl)
+                            .attr('alt', 'Event photo')
+                            .on('click', () => window.open(url, '_blank'))
+                            .on('error', function() {
+                                d3.select(this).remove();
+                                photosDiv.append('div')
+                                    .attr('class', 'event-photo-fallback')
+                                    .text('Image unavailable');
+                                console.warn(`Failed to load image: ${thumbnailUrl}`);
+                            });
+                    });
+                }
+            });
         });
     });
 }
@@ -436,7 +453,10 @@ function focusTrip(id) {
 
     // Update sidebar highlight
     d3.selectAll('.event-item').classed('focused', false);
-    d3.select(`.event-item[data-id="${id}"]`).classed('focused', true);
+    d3.selectAll('.day-container').classed('focused', false);
+    const eventItem = d3.select(`.event-item[data-id="${id}"]`);
+    eventItem.classed('focused', true);
+    eventItem.node().parentElement.parentElement.classList.add('focused');
 
     // Center map if location data exists
     const trip = allTripsData.find(t => t.id === id);
