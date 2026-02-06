@@ -211,7 +211,7 @@ let clusterGroup;
 let timelineZoom;
 let timelineWidth;
 let timelineZoomed; // reference to zoomed() closure
-let expandedClusterIds = new Set(); // track manually expanded clusters
+let expandedEvents = new Map(); // eventId -> target x position for spiderfied icons
 
 // Function to convert Google Drive view link to thumbnail or full image URL
 function convertGoogleDriveUrl(viewUrl, type = 'thumbnail', size = 100) {
@@ -287,7 +287,7 @@ function computeRowClusters(rowIndex, newXScale, hiddenTypes) {
 
     const dateGroups = [];
     eventsByDate.forEach((events, date) => {
-        const visible = events.filter(e => !hiddenTypes.has(e.eventType) && !expandedClusterIds.has(e.id));
+        const visible = events.filter(e => !hiddenTypes.has(e.eventType) && !expandedEvents.has(e.id));
         if (visible.length === 0) return;
         const x = newXScale(date);
         const n = visible.length;
@@ -395,10 +395,14 @@ function updateTimelineClusters(clusters) {
             document.getElementById('timeline-tooltip').style.display = 'none';
         })
         .on('click', function(mouseEvent, d) {
-            // Expand cluster — show individual icons in place
-            d.events.forEach(e => expandedClusterIds.add(e.id));
+            // Fan out icons horizontally from cluster center
+            const n = d.events.length;
+            const totalWidth = n * ICON_SIZE + (n - 1) * ICON_GAP;
+            const startX = d.cx - totalWidth / 2 + ICON_SIZE / 2;
+            d.events.forEach((e, i) => {
+                expandedEvents.set(e.id, startX + i * (ICON_SIZE + ICON_GAP));
+            });
             document.getElementById('timeline-tooltip').style.display = 'none';
-            // Re-run clustering to reflect the expansion
             if (svg && timelineZoomed) {
                 timelineZoomed({ transform: d3.zoomTransform(svg.node()) });
             }
@@ -561,9 +565,10 @@ function initTimeline() {
         const xAxis = d3.axisBottom(newXScale).ticks(ticks);
         gX.call(xAxis);
 
-        // Reposition all icons
+        // Reposition all icons (use fanned-out position if expanded)
         iconGroups.selectAll('.icon-text')
             .attr('x', function(d) {
+                if (expandedEvents.has(d.event.id)) return expandedEvents.get(d.event.id);
                 const rowIndex = d.rowIndex;
                 const evt = d.event;
                 const eventsByDate = eventsByDatePerRow[rowIndex];
@@ -577,8 +582,8 @@ function initTimeline() {
             });
 
         // Reset expanded clusters on zoom scale change
-        if (expandedClusterIds.size > 0 && transform.k !== (zoomed._lastK || null)) {
-            expandedClusterIds.clear();
+        if (expandedEvents.size > 0 && transform.k !== (zoomed._lastK || null)) {
+            expandedEvents.clear();
         }
         zoomed._lastK = transform.k;
 
@@ -683,6 +688,11 @@ function initMap() {
         markers.addLayer(marker);
     });
     map.addLayer(markers);
+
+    // Click cluster to spiderfy at any zoom level
+    markers.on('clusterclick', function(e) {
+        e.layer.spiderfy();
+    });
 
     map.on('popupclose', function(e) {
         if (e.popup._source) {
