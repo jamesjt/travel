@@ -6,14 +6,12 @@
     <title>Personal Trips Explorer</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=PT+Sans+Narrow:wght@400;700&display=swap" rel="stylesheet">
     <!-- Leaflet.markercluster CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- Leaflet.awesome-markers plugin -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
     <!-- D3.js -->
@@ -22,20 +20,40 @@
     <script src="https://unpkg.com/heic2any@0.0.3/dist/heic2any.min.js"></script>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-globe-americas fa-spin"></i>
+            <p>Loading trips...</p>
+        </div>
+    </div>
     <!-- Header Section -->
     <header id="header">
         <nav class="menu">
             <a href="#">Personal Trips Explorer</a>
         </nav>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <i class="fas fa-moon" id="theme-icon"></i>
+        </button>
     </header>
     <!-- Timeline Selector -->
     <div id="timeline-selector">
         <div class="timeline-wrapper">
-            <!-- Removed timeline-select dropdown as only one timeline is needed -->
             <div class="view-buttons">
                 <button class="view-btn active" data-view="map">Map</button>
                 <button class="view-btn" data-view="graph">Details</button>
                 <button class="view-btn" data-view="list">List</button>
+            </div>
+        </div>
+        <div class="lane-filters" id="lane-filters">
+            <div class="lane-toggles" id="lane-toggles"></div>
+            <div class="filter-scope-toggles">
+                <label class="scope-toggle">
+                    <input type="checkbox" id="filter-map"> Filter Map
+                </label>
+                <label class="scope-toggle">
+                    <input type="checkbox" id="filter-sidebar"> Filter Sidebar
+                </label>
             </div>
         </div>
     </div>
@@ -49,6 +67,10 @@
     <div id="main-content">
         <!-- Sidebar -->
         <div id="sidebar">
+            <div class="sidebar-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="sidebar-search" placeholder="Search events...">
+            </div>
             <div id="event-list"></div>
         </div>
         <!-- Resize Handle -->
@@ -63,21 +85,20 @@
     <!-- Tooltip for timeline -->
     <div id="timeline-tooltip" class="timeline-tooltip"></div>
     <!-- Photo Overlay -->
-    <div id="photo-overlay" style="display: none;">
+    <div id="photo-overlay">
         <div class="overlay-background"></div>
         <div class="photo-container">
-            <button class="close-button">X</button>
-            <button class="prev-arrow"><</button>
+            <button class="close-button" aria-label="Close"><i class="fas fa-times"></i></button>
+            <button class="prev-arrow" aria-label="Previous photo"><i class="fas fa-chevron-left"></i></button>
             <img id="overlay-photo" src="" alt="Overlay photo">
-            <button class="next-arrow">></button>
+            <button class="next-arrow" aria-label="Next photo"><i class="fas fa-chevron-right"></i></button>
+            <div class="photo-counter" id="photo-counter"></div>
         </div>
     </div>
     <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <!-- Leaflet.markercluster JavaScript -->
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <!-- Leaflet.awesome-markers JavaScript -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.min.js"></script>
     <!-- Papa Parse for CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <!-- Custom JavaScript -->
