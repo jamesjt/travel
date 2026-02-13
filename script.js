@@ -211,6 +211,7 @@ let clusterGroup;
 let timelineZoom;
 let timelineWidth;
 let timelineZoomed; // reference to zoomed() closure
+let stickyMonthLabel;
 let expandedEvents = new Map(); // eventId -> target x position for spiderfied icons
 
 // Function to convert Google Drive view link to thumbnail or full image URL
@@ -449,6 +450,13 @@ function initTimeline() {
         .attr('transform', `translate(0,${iconRowsHeight})`)
         .call(xAxis);
 
+    // Sticky month+year label on left edge
+    stickyMonthLabel = svg.append('text')
+        .attr('class', 'sticky-month-label')
+        .attr('x', margin.left + 4)
+        .attr('y', margin.top + iconRowsHeight + axisHeight - 4)
+        .attr('text-anchor', 'start');
+
     iconGroups = g.append('g')
         .attr('class', 'icon-group');
 
@@ -553,17 +561,36 @@ function initTimeline() {
         const transform = event.transform;
         const newXScale = transform.rescaleX(xScale);
 
-        let ticks;
-        if (transform.k > 10) {
+        let ticks, tickFormat;
+        if (transform.k > 5) {
             ticks = d3.timeDay.every(1);
-        } else if (transform.k > 5) {
+            tickFormat = function(d) {
+                return d.getDate() === 1 ? d3.timeFormat('%b')(d) : d.getDate();
+            };
+        } else if (transform.k > 2) {
             ticks = d3.timeWeek.every(1);
+            tickFormat = function(d) {
+                return d.getDate() === 1 ? d3.timeFormat('%b')(d) : d.getDate();
+            };
         } else {
             ticks = d3.timeMonth.every(1);
+            tickFormat = d3.timeFormat('%b');
         }
 
-        const xAxis = d3.axisBottom(newXScale).ticks(ticks);
+        const xAxis = d3.axisBottom(newXScale).ticks(ticks).tickFormat(tickFormat);
         gX.call(xAxis);
+
+        // Style first-of-month ticks brighter
+        gX.selectAll('.tick text')
+            .classed('tick-month-start', function(d) {
+                return d instanceof Date && d.getDate() === 1;
+            });
+
+        // Update sticky month label
+        const leftDate = newXScale.invert(0);
+        if (stickyMonthLabel) {
+            stickyMonthLabel.text(d3.timeFormat('%B %Y')(leftDate));
+        }
 
         // Reposition all icons (use fanned-out position if expanded)
         iconGroups.selectAll('.icon-text')

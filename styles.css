@@ -367,9 +367,22 @@ body {
     font-size: var(--text-xs);
 }
 
+#timeline .axis text.tick-month-start {
+    fill: var(--color-text-primary);
+    font-weight: 600;
+}
+
 #timeline .axis line,
 #timeline .axis path {
     stroke: var(--color-border-primary);
+}
+
+.sticky-month-label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 600;
+    fill: var(--color-text-secondary);
+    pointer-events: none;
 }
 
 /* ===== Main Content ===== */
